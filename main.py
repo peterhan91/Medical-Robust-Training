@@ -199,8 +199,8 @@ def main(args):
     print_args(args, logger)
 
     # model = WideResNet(depth=34, num_classes=10, widen_factor=10, dropRate=0.0)
-    model = models.resnet50(pretrained=args.pretrain)
-    # model = resnet50dsbn(pretrained=args.pretrain, widefactor=args.widefactor)
+    # model = models.resnet50(pretrained=args.pretrain)
+    model = resnet50dsbn(pretrained=args.pretrain, widefactor=args.widefactor)
     num_classes=3
     model.fc = nn.Linear(model.fc.in_features, num_classes)
 
@@ -238,7 +238,7 @@ def main(args):
                 tv.transforms.ToTensor(),
             ])
         tr_dataset = patd.PatchDataset(path_to_images=args.data_root,
-                                        fold='train',
+                                        fold='train', 
                                         transform=transform_train)
         tr_loader = DataLoader(tr_dataset, batch_size=args.batch_size, shuffle=True, num_workers=32)
 

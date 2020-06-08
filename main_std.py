@@ -27,7 +27,7 @@ class Trainer():
         args = self.args
         logger = self.logger
         opt = torch.optim.Adam(model.parameters(), args.learning_rate, weight_decay=args.weight_decay)
-        scheduler = torch.optim.lr_scheduler.MultiStepLR(opt, milestones=[100, 150], gamma=0.1)
+        scheduler = torch.optim.lr_scheduler.MultiStepLR(opt, milestones=[100, 200], gamma=0.1)
         _iter = 0
         begin_time = time()
         for epoch in range(1, args.max_epoch+1):
@@ -234,9 +234,10 @@ def main(args):
     print_args(args, logger)
 
     # model = WideResNet(depth=34, num_classes=10, widen_factor=10, dropRate=0.0)
-    model = models.resnet50(pretrained=args.pretrain)
-    num_classes=3
-    model.fc = nn.Linear(model.fc.in_features, num_classes)
+    model = models.densenet121(pretrained=args.pretrain)
+    num_classes=8
+    model.classifier = nn.Linear(model.classifier.in_features, num_classes)
+    # model.fc = nn.Linear(model.fc.in_features, num_classes)
 
     attack = FastGradientSignUntargeted(model, 
                                         args.epsilon, 
@@ -257,10 +258,10 @@ def main(args):
     if args.todo == 'train':
         
         transform_train = tv.transforms.Compose([
-                tv.transforms.Resize(256),
+                tv.transforms.Resize(224),
                 tv.transforms.ToTensor(),
                 tv.transforms.Lambda(lambda x: F.pad(x.unsqueeze(0),
-                                   (4*6,4*6,4*6,4*6), mode='constant', value=0).squeeze()),
+                                   (4*4,4*4,4*4,4*4), mode='constant', value=0).squeeze()),
                 tv.transforms.ToPILImage(),
                 tv.transforms.RandomHorizontalFlip(),
                 tv.transforms.ColorJitter(brightness=0.3, contrast=0.3, 
@@ -268,32 +269,36 @@ def main(args):
                 # tv.transforms.RandomRotation(25),
                 tv.transforms.RandomAffine(25, translate=(0.2, 0.2), 
                                             scale=(0.8,1.2), shear=10),                            
-                tv.transforms.RandomCrop(256),
+                tv.transforms.RandomCrop(224),
                 tv.transforms.ToTensor(),
             ])
 
         tr_dataset = patd.PatchDataset(path_to_images=args.data_root,
-                                        fold='train',
+                                        fold='train', 
+                                        sample=16000,
                                         transform=transform_train)
-        tr_loader = DataLoader(tr_dataset, batch_size=args.batch_size, shuffle=True, num_workers=32)
+        tr_loader = DataLoader(tr_dataset, batch_size=args.batch_size, 
+                                shuffle=True, num_workers=32, pin_memory=True)
 
         # evaluation during training
         transform_test = tv.transforms.Compose([
-                tv.transforms.Resize(256),
+                tv.transforms.Resize(224),
                 # tv.transforms.CenterCrop(224),
                 tv.transforms.ToTensor(),
                 # tv.transforms.Normalize(mean, std)
                 ])
         te_dataset = patd.PatchDataset(path_to_images=args.data_root,
-                                        fold='valid',
+                                        # fold='valid',
+                                        fold = 'test',
                                         transform=transform_test)
-        te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=32)
+        te_loader = DataLoader(te_dataset, batch_size=args.batch_size, 
+                                shuffle=False, num_workers=32, pin_memory=True)
 
         trainer.train(model, tr_loader, te_loader, args.adv_train)
     
     elif args.todo == 'test':
         transform_test = tv.transforms.Compose([
-                tv.transforms.Resize(256),
+                tv.transforms.Resize(224),
                 # tv.transforms.CenterCrop(224),
                 tv.transforms.ToTensor(),
                 # tv.transforms.Normalize(mean, std)
