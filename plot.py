@@ -14,7 +14,7 @@ from sklearn.metrics import classification_report, confusion_matrix
 random.seed(20)
 sns.set()
 
-def plot_AUC(pred, label, saveDir, PRED_label):
+def plot_AUC(pred, label, saveDir, savename, PRED_label):
     
     fig, axs = plt.subplots(len(PRED_label), 
                             figsize = (5, 5*len(PRED_label)))
@@ -24,16 +24,24 @@ def plot_AUC(pred, label, saveDir, PRED_label):
     for n, pred_label in enumerate(PRED_label):
 
         name = PRED_label[n]
-        y_true = label[:,n]
-        y_pred = pred[:,n]
+        # y_true = label[:,n]
+        # y_pred = pred[:,n]
+        y_true = label[:]
+        y_pred = pred[:]
         print(y_true.shape)
         print(y_pred.shape)
-        fpr, tpr, _ = roc_curve(y_true, y_pred)
+        fpr, tpr, _ = roc_curve(list(y_true), list(y_pred))
 
-        axs[n].plot(fpr, tpr, 'b-', alpha = 1, 
+        # axs[n].plot(fpr, tpr, 'b-', alpha = 1, 
+        #                 label = name+'(AUC:%2.2f)' % roc_auc_score(y_true, y_pred))
+        # axs[n].legend(loc = 4, prop={'size': 8})
+        # axs[n].set_xlabel('False Positive Rate')
+        # axs[n].set_ylabel('True Positive Rate')
+
+        axs.plot(fpr, tpr, 'b-', alpha = 1, 
                         label = name+'(AUC:%2.2f)' % roc_auc_score(y_true, y_pred))
-        axs[n].legend(loc = 4, prop={'size': 8})
-        axs[n].set_xlabel('False Positive Rate')
-        axs[n].set_ylabel('True Positive Rate')
+        axs.legend(loc = 4, prop={'size': 8})
+        axs.set_xlabel('False Positive Rate')
+        axs.set_ylabel('True Positive Rate')
 
-    fig.savefig(os.path.join(saveDir, 'AUC.png'), dpi=300, bbox_inches = 'tight')
+    fig.savefig(os.path.join(saveDir, savename), dpi=300, bbox_inches = 'tight')

@@ -13,29 +13,31 @@ class PatchDataset(Dataset):
 
         self.transform = transform
         self.path_to_images = path_to_images
-        self.df = pd.read_csv("./label/cheXPert_label.csv")
+        self.df = pd.read_csv("./label/roimg_label_.csv")
         self.fold = fold
         # the 'fold' column says something regarding the train/valid/test seperation
         self.df = self.df[self.df['fold'] == fold]
         if(sample > 0 and sample < len(self.df)):
             self.df = self.df.sample(sample, random_state=42)
         
-        self.df = self.df.set_index("Image Index")
-        # self.df = self.df.set_index("scan index")
+        self.df = self.df.set_index('scan index')
+        # self.df = self.df.set_index('Image Index')
         # df.set_index: set the dataframe index using existing columns. 
-        # self.PRED_LABEL = ['healthy', 'partially injured', 'completely ruptured']
-        self.PRED_LABEL = ['No Finding', 'Cardiomegaly', 'Edema', 
-                            'Consolidation', 'Pneumonia', 'Atelectasis',
-                            'Pneumothorax', 'Pleural Effusion']
+        # self.PRED_LABEL = ['malignancy']
+        self.PRED_LABEL = ['healthy', 'partially injured', 'completely ruptured']
+        # self.PRED_LABEL = ['No Finding', 'Cardiomegaly', 'Edema', 
+        #                     'Consolidation', 'Pneumonia', 'Atelectasis',
+        #                     'Pneumothorax', 'Pleural Effusion']
 
     def __len__(self):
         return len(self.df)
 
     def __getitem__(self, idx):
-        filename = '{0:06d}'.format(self.df.index[idx])
+        # filename = '{0:06d}'.format(self.df.index[idx])
         image = Image.open(
-            # os.path.join(self.path_to_images, self.fold, self.df.index[idx])
-            os.path.join(self.path_to_images, filename+'.png')
+            # os.path.join(self.path_to_images, filename+'.png')                    # chexpert
+            os.path.join(self.path_to_images, self.fold, self.df.index[idx])      # knee  
+            # os.path.join(self.path_to_images, self.df.index[idx])                 # Luna
             )
         image = image.convert('RGB')
         label = np.zeros(len(self.PRED_LABEL), dtype=int)

@@ -17,6 +17,7 @@ from utils import makedirs, create_logger, tensor2cuda, numpy2cuda, evaluate, ev
 from argument import parser, print_args
 from plot import plot_AUC
 import patch_dataset as patd
+# os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(map(str, [0,1,2]))
 
 class Trainer():
     
@@ -36,7 +37,6 @@ class Trainer():
         best_loss = 999
         
         for epoch in range(1, args.max_epoch+1):
-            scheduler.step()
             for data, label in tr_loader:
                 # print('data shape is ', data.shape)
                 # print('label shape is ', label.shape)
@@ -55,6 +55,7 @@ class Trainer():
                 opt.zero_grad()
                 loss_t.backward()
                 opt.step()
+            
                 
                 t = Variable(torch.Tensor([0.5]).cuda()) # threshold to compute accuracy
 
@@ -106,7 +107,7 @@ class Trainer():
                     save_model(model, file_name)
 
                 _iter += 1
-
+            scheduler.step()
             if va_loader is not None:
                 t1 = time()
                 va_acc, va_adv_acc, va_stdloss, va_advloss = self.test(model, va_loader, True, False)
@@ -176,8 +177,12 @@ class Trainer():
         if if_AUC:
             pred = np.squeeze(np.array(pred_list))
             label = np.squeeze(np.array(label_list))
-            PRED_label = ['healthy', 'partially injured', 'completely ruptured'] 
-            plot_AUC(pred, label, self.args.log_folder, PRED_label)
+            # PRED_label = ['No Finding', 'Cardiomegaly', 'Edema', 
+            #                 'Consolidation', 'Pneumonia', 'Atelectasis',
+            #                 'Pneumothorax', 'Pleural Effusion']
+            PRED_label = ['healthy', 'partially injured', 'completely ruptured']
+            # PRED_label = ['malignancy']
+            plot_AUC(pred, label, self.args.log_folder, 'auc.png', PRED_label)
         else:
             return total_acc / num, total_adv_acc / num, total_stdloss / num, total_advloss / num
 
@@ -198,8 +203,6 @@ def main(args):
 
     print_args(args, logger)
 
-    # model = WideResNet(depth=34, num_classes=10, widen_factor=10, dropRate=0.0)
-    # model = models.resnet50(pretrained=args.pretrain)
     model = resnet50dsbn(pretrained=args.pretrain, widefactor=args.widefactor)
     num_classes=3
     model.fc = nn.Linear(model.fc.in_features, num_classes)
@@ -213,15 +216,11 @@ def main(args):
                                         _type=args.perturbation_type)
 
     if torch.cuda.is_available():
-        model.cuda()
+        # model = nn.DataParallel(model).cuda()
+        model = model.cuda()
 
     trainer = Trainer(args, logger, attack)
-
-    mean = [0.485, 0.456, 0.406]
-    std = [0.229, 0.224, 0.225]
-
     if args.todo == 'train':
-
         transform_train = tv.transforms.Compose([
                 tv.transforms.Resize(256),
                 tv.transforms.ToTensor(),
@@ -233,14 +232,15 @@ def main(args):
                                             saturation=0.3, hue=0.3),
                 # tv.transforms.RandomRotation(25),
                 tv.transforms.RandomAffine(25, translate=(0.2, 0.2), 
-                                            scale=(0.8,1.2), shear=10),                            
+                                            scale=(0.8,1.2), 
+                                            shear=10),                            
                 tv.transforms.RandomCrop(256),
                 tv.transforms.ToTensor(),
             ])
         tr_dataset = patd.PatchDataset(path_to_images=args.data_root,
                                         fold='train', 
                                         transform=transform_train)
-        tr_loader = DataLoader(tr_dataset, batch_size=args.batch_size, shuffle=True, num_workers=32)
+        tr_loader = DataLoader(tr_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
 
         # evaluation during training
         transform_test = tv.transforms.Compose([
@@ -249,16 +249,16 @@ def main(args):
                 tv.transforms.ToTensor(),
                 # tv.transforms.Normalize(mean, std)
                 ])
-        te_dataset = patd.PatchDataset(path_to_images=args.data_root,
+        va_dataset = patd.PatchDataset(path_to_images=args.data_root,
                                         fold='valid',
                                         transform=transform_test)
-        te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=32)
+        te_loader = DataLoader(va_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8)
              
         trainer.train(model, tr_loader, te_loader, args.adv_train)
     
-    elif args.todo == 'test':
+    elif args.todo == 'test': # set 'valid' fold for knee and luna dataset and set 'test' fold for CXR dataset
         te_dataset = patd.PatchDataset(path_to_images=args.data_root,
-                                        fold='test',
+                                        fold='valid',
                                         transform=tv.transforms.ToTensor())
         te_loader = DataLoader(te_dataset, batch_size=1, shuffle=False, num_workers=1)
         checkpoint = torch.load(args.load_checkpoint)
