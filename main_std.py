@@ -15,6 +15,7 @@ from utils import makedirs, create_logger, tensor2cuda, numpy2cuda, evaluate, ev
 from argument import parser, print_args
 from plot import plot_AUC
 import patch_dataset as patd
+# os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(map(str, [0,2]))
 
 class Trainer():
     
@@ -190,37 +191,38 @@ class Trainer():
             pred = np.squeeze(np.array(pred_list))
             predadv = np.squeeze(np.array(predadv_list))
             label = np.squeeze(np.array(label_list))
-            PRED_label = ['No Finding', 'Cardiomegaly', 'Edema', 
-                            'Consolidation', 'Pneumonia', 'Atelectasis',
-                            'Pneumothorax', 'Pleural Effusion']
-            plot_AUC(pred, label, self.args.log_folder, 'auc.png', PRED_label)
-            plot_AUC(predadv, label, self.args.log_folder, 'auc_'+str(args.epsilon)+'.png', PRED_label)
-            np.save('predstd_'+str(args.epsilon)+'.npy', pred)
-            np.save('predstdadv_'+str(args.epsilon)+'.npy', predadv)
-            np.save('labelstd_'+str(args.epsilon)+'.npy', label)
+            np.save(os.path.join(self.args.log_folder, 'y_pred.npy'), pred)
+            np.save(os.path.join(self.args.log_folder, 'y_predadv_'+str(args.epsilon)+'.npy'), predadv)
+            np.save(os.path.join(self.args.log_folder, 'y_true.npy'), label)
+            
+            # PRED_label = ['No Finding', 'Cardiomegaly', 'Edema', 
+            #                 'Consolidation', 'Pneumonia', 'Atelectasis',
+            #                 'Pneumothorax', 'Pleural Effusion']
+            # PRED_label = ['healthy', 'partially injured', 'completely ruptured']
+            # PRED_label = ['malignancy']
+            # plot_AUC(pred, label, self.args.log_folder, 'auc.png', PRED_label)
+            # plot_AUC(predadv, label, self.args.log_folder, 'auc_'+str(args.epsilon)+'.png', PRED_label)
+            # np.save('predstd_'+str(args.epsilon)+'.npy', pred)
+            # np.save('predstdadv_'+str(args.epsilon)+'.npy', predadv)
+            # np.save('labelstd_'+str(args.epsilon)+'.npy', label)
         else:
             return total_acc / num, total_adv_acc / num, total_stdloss / num, total_advloss / num
 
 def main(args):
 
     save_folder = '%s_%s' % (args.dataset, args.affix)
-
     log_folder = os.path.join(args.log_root, save_folder)
     model_folder = os.path.join(args.model_root, save_folder)
-
     makedirs(log_folder)
     makedirs(model_folder)
-
     setattr(args, 'log_folder', log_folder)
     setattr(args, 'model_folder', model_folder)
-
     logger = create_logger(log_folder, args.todo, 'info')
-
     print_args(args, logger)
 
     # model = WideResNet(depth=34, num_classes=10, widen_factor=10, dropRate=0.0)
     model = models.resnet50(pretrained=args.pretrain)
-    num_classes=1
+    num_classes=8
     # model.classifier = nn.Linear(model.classifier.in_features, num_classes)
     model.fc = nn.Linear(model.fc.in_features, num_classes)
 
@@ -234,19 +236,17 @@ def main(args):
 
     if torch.cuda.is_available():
         model.cuda()
+        # model = nn.DataParallel(model).cuda()
 
     trainer = Trainer(args, logger, attack)
-
-    mean = [0.485, 0.456, 0.406]
-    std = [0.229, 0.224, 0.225]
 
     if args.todo == 'train':
 
         transform_train = tv.transforms.Compose([
-                tv.transforms.Resize(64),
+                tv.transforms.Resize(256),
                 tv.transforms.ToTensor(),
                 tv.transforms.Lambda(lambda x: F.pad(x.unsqueeze(0),
-                                   (4*2,4*2,4*2,4*2), mode='constant', value=0).squeeze()),
+                                   (4*6,4*6,4*6,4*6), mode='constant', value=0).squeeze()),
                 tv.transforms.ToPILImage(),
                 tv.transforms.RandomHorizontalFlip(),
                 tv.transforms.ColorJitter(brightness=0.3, contrast=0.3, 
@@ -254,23 +254,22 @@ def main(args):
                 # tv.transforms.RandomRotation(25),
                 tv.transforms.RandomAffine(25, translate=(0.2, 0.2), 
                                             scale=(0.8,1.2), shear=10),                            
-                tv.transforms.RandomCrop(64),
+                tv.transforms.RandomCrop(256),
                 tv.transforms.ToTensor(),
             ])
         tr_dataset = patd.PatchDataset(path_to_images=args.data_root,
                                         fold='train', 
                                         transform=transform_train)
         tr_loader = DataLoader(tr_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
-
         # evaluation during training
         transform_test = tv.transforms.Compose([
-                tv.transforms.Resize(64),
+                tv.transforms.Resize(256),
                 # tv.transforms.CenterCrop(224),
                 tv.transforms.ToTensor(),
                 # tv.transforms.Normalize(mean, std)
                 ])
         te_dataset = patd.PatchDataset(path_to_images=args.data_root,
-                                        fold='test',
+                                        fold='valid',
                                         transform=transform_test)
         te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8)
              
@@ -278,8 +277,11 @@ def main(args):
     
     elif args.todo == 'test':
         te_dataset = patd.PatchDataset(path_to_images=args.data_root,
-                                        fold='valid',
-                                        transform=tv.transforms.ToTensor())
+                                        fold='test',
+                                        transform=tv.transforms.Compose([
+                                            tv.transforms.Resize(256),
+                                            tv.transforms.ToTensor(),
+                                            ]))
         te_loader = DataLoader(te_dataset, batch_size=1, shuffle=False, num_workers=1)
         checkpoint = torch.load(args.load_checkpoint)
         model.load_state_dict(checkpoint)
@@ -292,7 +294,5 @@ def main(args):
 
 if __name__ == '__main__':
     args = parser()
-
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
-
     main(args)

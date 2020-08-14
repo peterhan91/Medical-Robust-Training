@@ -2,178 +2,101 @@
 import os
 import torch
 import torchvision as tv
+import torch.nn as nn
 import numpy as np
-
 from torch.utils.data import DataLoader
-
 from utils import makedirs, tensor2cuda, load_model, LabelDict
 from argument import parser
 from visualization import VanillaBackprop
 from attack import FastGradientSignUntargeted
 from model.madry_model import WideResNet
-
+from model.resnetdsbn import *
+from model import *
+import patch_dataset as patd
 import matplotlib.pyplot as plt 
 
-max_epsilon = 4.7
-
-perturbation_type = 'l2'
-
-out_num = 5
-
-img_folder = 'img'
-makedirs(img_folder)
-
+perturbation_type = 'linf'
+# out_num = 100
 args = parser()
+max_epsilon = args.epsilon
+alpha = args.alpha
+save_folder = '%s_%s' % (args.dataset, args.affix)
+img_folder = os.path.join(args.log_root, save_folder)
+makedirs(img_folder)
+args = parser()
+# label_dict = LabelDict(args.dataset)
 
-label_dict = LabelDict(args.dataset)
+te_dataset = patd.PatchDataset(path_to_images=args.data_root,
+                                fold='test',
+                                transform=tv.transforms.Compose([
+                                            tv.transforms.Resize(64),
+                                            tv.transforms.ToTensor(),
+                                            ]))
+te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=True, num_workers=1)
 
-te_dataset = tv.datasets.CIFAR10(args.data_root, 
-                               train=False, 
-                               transform=tv.transforms.ToTensor(), 
-                               download=True)
-
-te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=4)
-
-
-for data, label in te_loader:
-
-    data, label = tensor2cuda(data), tensor2cuda(label)
-
-
-    break
-
+# te_dataset = tv.datasets.MNIST(args.data_root, 
+#                                 train=False, 
+#                                 transform=tv.transforms.ToTensor(), 
+#                                 download=True)
+# te_loader = DataLoader(te_dataset, batch_size=args.batch_size, 
+#                         shuffle=False, num_workers=4)
 
 adv_list = []
-pred_list = []
+in_list = []
+# model = MLP_bns(input_dim=32*32, output_dim=1)
+model = resnet50dsbn(pretrained=args.pretrain, widefactor=args.widefactor)
+num_classes=1
+model.fc = nn.Linear(model.fc.in_features, num_classes)
+load_model(model, args.load_checkpoint)
+if torch.cuda.is_available():
+    model.cuda()
+attack = FastGradientSignUntargeted(model, 
+                                    max_epsilon, 
+                                    alpha, 
+                                    min_val=0, 
+                                    max_val=1, 
+                                    max_iters=args.k, 
+                                    _type=perturbation_type)
 
-with torch.no_grad():
-
-    model = WideResNet(depth=34, num_classes=10, widen_factor=10, dropRate=0.0)
-
-    load_model(model, args.load_checkpoint)
-
-    if torch.cuda.is_available():
-        model.cuda()
-
-    attack = FastGradientSignUntargeted(model, 
-                                        max_epsilon, 
-                                        args.alpha, 
-                                        min_val=0, 
-                                        max_val=1, 
-                                        max_iters=args.k, 
-                                        _type=perturbation_type)
-
-   
-    adv_data = attack.perturb(data, label, 'mean', False)
-
-    output = model(adv_data, _eval=True)
-    pred = torch.max(output, dim=1)[1]
-    adv_list.append(adv_data.cpu().numpy().squeeze() * 255.0)  # (N, 28, 28)
-    pred_list.append(pred.cpu().numpy())
-
-data = data.cpu().numpy().squeeze()  # (N, 28, 28)
-data *= 255.0
-label = label.cpu().numpy()
-
-adv_list.insert(0, data)
-
-pred_list.insert(0, label)
-
-
-types = ['Original', 'Your Model']
-
-fig, _axs = plt.subplots(nrows=len(adv_list), ncols=out_num)
-
-axs = _axs
-
-for j, _type in enumerate(types):
-    axs[j, 0].set_ylabel(_type)
-
-    for i in range(out_num):
-        axs[j, i].set_xlabel('%s' % label_dict.label2class(pred_list[j][i]))
-        img = adv_list[j][i]
-        # print(img)
-        img = np.transpose(img, (1, 2, 0))
-
-        img = img.astype(np.uint8)
-        axs[j, i].imshow(img)
-
-        axs[j, i].get_xaxis().set_ticks([])
-        axs[j, i].get_yaxis().set_ticks([])
-
-plt.tight_layout()
-plt.savefig(os.path.join(img_folder, 'cifar_large_%s_%s.jpg' % (perturbation_type, args.affix)))
-# plt.savefig(os.path.join(img_folder, 'test_%s.jpg' % (args.affix)))
-
-
-# types = ['Original', 'Standard', r'$l_{\infty}$-trained', r'$l_2$-trained']
-
-
-# model_checkpoints = ['checkpoint/cifar-10_std/checkpoint_76000.pth',
-#                      'checkpoint/cifar-10_linf/checkpoint_76000.pth', 
-#                      'checkpoint/cifar-10_l2/checkpoint_76000.pth']
-
-# adv_list = []
-# pred_list = []
-
-# max_epsilon = 4
-
-# perturbation_type = 'l2'
-
-# with torch.no_grad():
-#     for checkpoint  in model_checkpoints:
-
-#         model = WideResNet(depth=34, num_classes=10, widen_factor=10, dropRate=0.0)
-
-#         load_model(model, checkpoint)
-
-#         if torch.cuda.is_available():
-#             model.cuda()
-
-#         attack = FastGradientSignUntargeted(model, 
-#                                             max_epsilon, 
-#                                             args.alpha, 
-#                                             min_val=0, 
-#                                             max_val=1, 
-#                                             max_iters=args.k, 
-#                                             _type=perturbation_type)
-
-       
-#         adv_data = attack.perturb(data, label, 'mean', False)
-
-#         output = model(adv_data, _eval=True)
-#         pred = torch.max(output, dim=1)[1]
-#         adv_list.append(adv_data.cpu().numpy().squeeze() * 255.0)  # (N, 28, 28)
-#         pred_list.append(pred.cpu().numpy())
+for data, label in te_loader:
+    data, label = tensor2cuda(data), tensor2cuda(label)
+    # data = data.view(-1, 32*32)
+    # break
+    with torch.no_grad():
+        adv_data = attack.perturb(data, label, 'mean', False, True, False)
+        model.eval()
+        output = model(adv_data, [1])
+        pred = torch.max(output, dim=1)[1]
+        adv_list.append(adv_data.cpu().numpy().squeeze() * 255.0)  # (N, 28, 28)
+        in_list.append(data.cpu().numpy().squeeze() * 255.0)
 
 # data = data.cpu().numpy().squeeze()  # (N, 28, 28)
 # data *= 255.0
 # label = label.cpu().numpy()
-
 # adv_list.insert(0, data)
-
 # pred_list.insert(0, label)
+print(np.array(adv_list).shape)
+print(np.array(in_list).shape)
+np.save(os.path.join(img_folder, 'sample_advx.npy'), np.array(adv_list))
+np.save(os.path.join(img_folder, 'sample_x.npy'), np.array(in_list))
+# print(np.array(pred_list).shape)
 
-# out_num = 5
-
-# fig, _axs = plt.subplots(nrows=len(adv_list), ncols=out_num)
-
-# axs = _axs
-
-# for j, _type in enumerate(types):
-#     axs[j, 0].set_ylabel(_type)
-
-#     for i in range(out_num):
-#         axs[j, i].set_xlabel('%s' % label_dict.label2class(pred_list[j][i]))
-#         img = adv_list[j][i]
-#         # print(img)
-#         img = np.transpose(img, (1, 2, 0))
-
-#         img = img.astype(np.uint8)
-#         axs[j, i].imshow(img)
-
-#         axs[j, i].get_xaxis().set_ticks([])
-#         axs[j, i].get_yaxis().set_ticks([])
-
-# plt.tight_layout()
-# plt.savefig(os.path.join(img_folder, 'cifar_large_%s_%s.jpg' % (perturbation_type, args.affix)))
+'''
+types = ['Original', 'Your Model']
+fig, _axs = plt.subplots(nrows=len(adv_list), ncols=out_num)
+axs = _axs
+for j, _type in enumerate(types):
+    axs[j, 0].set_ylabel(_type)
+    for i in range(out_num):
+        # print(pred_list[j][i])
+        axs[j, i].set_xlabel('%s' % label_dict.label2class(int(pred_list[j][i])))
+        img = adv_list[j][i]
+        # print(img.shape)
+        img = np.transpose(img, (1, 2, 0))
+        img = img.astype(np.uint8)
+        axs[j, i].imshow(img)
+        axs[j, i].get_xaxis().set_ticks([])
+        axs[j, i].get_yaxis().set_ticks([])
+plt.tight_layout()
+plt.savefig(os.path.join(img_folder, 'Image_large_%s_%s.jpg' % (perturbation_type, args.affix)))
+'''

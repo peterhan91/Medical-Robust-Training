@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from utils import count_parameters
+from model.dsbn import *
 
 class Expression(nn.Module):
     def __init__(self, func):
@@ -15,6 +16,52 @@ class Expression(nn.Module):
     
     def forward(self, input):
         return self.func(input)
+
+class LogisticRegression(torch.nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super(LogisticRegression, self).__init__()
+        self.linear = torch.nn.Linear(input_dim, output_dim)
+
+    def forward(self, x):
+        outputs = self.linear(x)
+        return outputs
+
+class MLP_bns(torch.nn.Module):
+    def __init__(self, input_dim, output_dim, hidden_dim=256):
+        super(MLP_bns, self).__init__()
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.hidden_dim = hidden_dim
+        self.num_domains = 2
+
+        self.fc1 = nn.Linear(self.input_dim, self.hidden_dim, bias=True)
+        self.relu = nn.ReLU(inplace=True)
+        self.bn = DomainSpecificBatchNorm1d(self.hidden_dim, self.num_domains)
+        self.fc2 = nn.Linear(self.hidden_dim, self.output_dim, bias=True)
+
+    def forward(self, x, domain_label):
+        x, _ = self.bn(self.fc1(x), domain_label)
+        x = self.relu(x)
+        out = self.fc2(x)
+        return out
+
+class MLP(torch.nn.Module):
+    def __init__(self, input_dim, output_dim, hidden_dim=256):
+        super(MLP, self).__init__()
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.hidden_dim = hidden_dim
+
+        self.fc1 = nn.Linear(self.input_dim, self.hidden_dim, bias=True)
+        self.relu = nn.ReLU(inplace=True)
+        self.bn = nn.BatchNorm1d(self.hidden_dim)
+        self.fc2 = nn.Linear(self.hidden_dim, self.output_dim, bias=True)
+
+    def forward(self, x):
+        x = self.bn(self.fc1(x))
+        x = self.relu(x)
+        out = self.fc2(x)
+        return out
 
 class Model(nn.Module):
     def __init__(self, i_c=1, n_c=10):
@@ -26,11 +73,9 @@ class Model(nn.Module):
         self.conv2 = nn.Conv2d(32, 64, 5, stride=1, padding=2, bias=True)
         self.pool2 = nn.MaxPool2d((2, 2), stride=(2, 2), padding=0)
 
-
         self.flatten = Expression(lambda tensor: tensor.view(tensor.shape[0], -1))
         self.fc1 = nn.Linear(7 * 7 * 64, 1024, bias=True)
         self.fc2 = nn.Linear(1024, n_c)
-
 
     def forward(self, x_i, _eval=False):
 

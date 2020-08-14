@@ -6,6 +6,9 @@ label/
 log/
 .ipynb_checkpoints/
 old_model/
+img/
+jupyter/
+results/
 
 *.py[cod]
 *$py.class

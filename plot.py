@@ -24,24 +24,24 @@ def plot_AUC(pred, label, saveDir, savename, PRED_label):
     for n, pred_label in enumerate(PRED_label):
 
         name = PRED_label[n]
-        # y_true = label[:,n]
-        # y_pred = pred[:,n]
-        y_true = label[:]
-        y_pred = pred[:]
+        y_true = label[:,n]
+        y_pred = pred[:,n]
+        # y_true = label[:]
+        # y_pred = pred[:]
         print(y_true.shape)
         print(y_pred.shape)
         fpr, tpr, _ = roc_curve(list(y_true), list(y_pred))
 
-        # axs[n].plot(fpr, tpr, 'b-', alpha = 1, 
-        #                 label = name+'(AUC:%2.2f)' % roc_auc_score(y_true, y_pred))
-        # axs[n].legend(loc = 4, prop={'size': 8})
-        # axs[n].set_xlabel('False Positive Rate')
-        # axs[n].set_ylabel('True Positive Rate')
-
-        axs.plot(fpr, tpr, 'b-', alpha = 1, 
+        axs[n].plot(fpr, tpr, 'b-', alpha = 1, 
                         label = name+'(AUC:%2.2f)' % roc_auc_score(y_true, y_pred))
-        axs.legend(loc = 4, prop={'size': 8})
-        axs.set_xlabel('False Positive Rate')
-        axs.set_ylabel('True Positive Rate')
+        axs[n].legend(loc = 4, prop={'size': 8})
+        axs[n].set_xlabel('False Positive Rate')
+        axs[n].set_ylabel('True Positive Rate')
+
+        # axs.plot(fpr, tpr, 'b-', alpha = 1, 
+        #                label = name+'(AUC:%2.2f)' % roc_auc_score(y_true, y_pred))
+        # axs.legend(loc = 4, prop={'size': 8})
+        # axs.set_xlabel('False Positive Rate')
+        # axs.set_ylabel('True Positive Rate')
 
     fig.savefig(os.path.join(saveDir, savename), dpi=300, bbox_inches = 'tight')

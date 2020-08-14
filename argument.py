@@ -26,8 +26,8 @@ def parser():
     parser.add_argument('--pretrain', type=bool, default=False, 
         help='Use ImageNet pretraining or not')
 
-    parser.add_argument('--batch_size', '-b', type=int, default=8, help='batch size')
-    parser.add_argument('--max_epoch', '-m_e', type=int, default=200, 
+    parser.add_argument('--batch_size', '-b', type=int, default=16, help='batch size')
+    parser.add_argument('--max_epoch', '-m_e', type=int, default=300, 
         help='the maximum numbers of the model see a sample')
     parser.add_argument('--learning_rate', '-lr', type=float, default=1e-2, help='learning rate')
     parser.add_argument('--weight_decay', '-w', type=float, default=0, 

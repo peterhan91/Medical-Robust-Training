@@ -13,7 +13,7 @@ class PatchDataset(Dataset):
 
         self.transform = transform
         self.path_to_images = path_to_images
-        self.df = pd.read_csv("./label/roimg_label_.csv")
+        self.df = pd.read_csv("./label/roimg_label.csv")
         self.fold = fold
         # the 'fold' column says something regarding the train/valid/test seperation
         self.df = self.df[self.df['fold'] == fold]
@@ -28,6 +28,9 @@ class PatchDataset(Dataset):
         # self.PRED_LABEL = ['No Finding', 'Cardiomegaly', 'Edema', 
         #                     'Consolidation', 'Pneumonia', 'Atelectasis',
         #                     'Pneumothorax', 'Pleural Effusion']
+        # self.PRED_LABEL = ['Mass', 'Cardiomegaly', 'Edema', 
+        #             'Consolidation', 'Pneumonia', 'Atelectasis',
+        #             'Pneumothorax', 'Effusion']
 
     def __len__(self):
         return len(self.df)
@@ -37,7 +40,7 @@ class PatchDataset(Dataset):
         image = Image.open(
             # os.path.join(self.path_to_images, filename+'.png')                    # chexpert
             os.path.join(self.path_to_images, self.fold, self.df.index[idx])      # knee  
-            # os.path.join(self.path_to_images, self.df.index[idx])                 # Luna
+            # os.path.join(self.path_to_images, self.df.index[idx])                 # Luna nih
             )
         image = image.convert('RGB')
         label = np.zeros(len(self.PRED_LABEL), dtype=int)

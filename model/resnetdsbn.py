@@ -224,7 +224,7 @@ def _update_initial_weights_dsbn(state_dict, num_classes=1000, num_domains=2, ds
 
 
 class DSBNResNet(nn.Module):
-    def __init__(self, block, layers, widefactor, in_features=0, num_classes=1000, num_domains=2):
+    def __init__(self, block, layers, widefactor=1, in_features=0, num_classes=1000, num_domains=2):
         self.inplanes = 64
         self.widefactor = widefactor
         self.in_features = in_features
@@ -340,7 +340,7 @@ class BasicBlock(nn.Module):
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, inplanes, planes, widefactor, stride=1, downsample=None, num_domains=2):
+    def __init__(self, inplanes, planes, widefactor=1, stride=1, downsample=None, num_domains=2):
         super(Bottleneck, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = DomainSpecificBatchNorm2d(planes, num_domains)
