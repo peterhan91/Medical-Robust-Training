@@ -2,7 +2,7 @@
 __pycache__/
 checkpoint/
 grad_img/
-label/
+# label/
 log/
 .ipynb_checkpoints/
 old_model/
