@@ -9,6 +9,12 @@ old_model/
 img/
 jupyter/
 results/
+.DS_Store
+._.DS_Store
+analysis/
+.vscode/settings.json
+not_used/
+toy/
 
 *.py[cod]
 *$py.class

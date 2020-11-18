@@ -28,10 +28,10 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("Device being used:", device)
 
 num_classes=8
-# model = models.resnet50(pretrained=False)
-model = resnet50dsbn(pretrained=args.pretrain, widefactor=args.widefactor)
+model = models.resnet50(pretrained=False)
+# model = resnet50dsbn(pretrained=args.pretrain, widefactor=args.widefactor)
 model.fc = nn.Linear(model.fc.in_features, num_classes)
-path = './checkpoint/cxr/chexpert_linf_full_/checkpoint_best.pth'
+path = './checkpoint/cxr/chexpert_std_/checkpoint_best.pth'
 
 try:
     load_model(model, path)
@@ -65,7 +65,7 @@ with torch.no_grad():
         data, label = tensor2cuda(data), tensor2cuda(label)
         model.eval()
         get_all_layers(model)
-        _ = model(data, [1])
+        _ = model(data)
         keys = list(visualisation.keys())
         print(len(keys))
         a_file = open('./results/cka/'+args.affix, "wb")

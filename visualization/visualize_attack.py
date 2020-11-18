@@ -2,6 +2,7 @@
 import os
 import torch
 import torchvision as tv
+from torchvision import models
 import torch.nn as nn
 import numpy as np
 from torch.utils.data import DataLoader
@@ -18,8 +19,8 @@ import matplotlib.pyplot as plt
 perturbation_type = 'linf'
 # out_num = 100
 args = parser()
-max_epsilon = args.epsilon
-alpha = args.alpha
+max_epsilon = 0.002
+alpha = max_epsilon / 2
 save_folder = '%s_%s' % (args.dataset, args.affix)
 img_folder = os.path.join(args.log_root, save_folder)
 makedirs(img_folder)
@@ -29,23 +30,16 @@ args = parser()
 te_dataset = patd.PatchDataset(path_to_images=args.data_root,
                                 fold='test',
                                 transform=tv.transforms.Compose([
-                                            tv.transforms.Resize(64),
+                                            tv.transforms.Resize(256),
                                             tv.transforms.ToTensor(),
                                             ]))
-te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=True, num_workers=1)
-
-# te_dataset = tv.datasets.MNIST(args.data_root, 
-#                                 train=False, 
-#                                 transform=tv.transforms.ToTensor(), 
-#                                 download=True)
-# te_loader = DataLoader(te_dataset, batch_size=args.batch_size, 
-#                         shuffle=False, num_workers=4)
+te_loader = DataLoader(te_dataset, batch_size=1, shuffle=True, num_workers=1)
 
 adv_list = []
 in_list = []
 # model = MLP_bns(input_dim=32*32, output_dim=1)
-model = resnet50dsbn(pretrained=args.pretrain, widefactor=args.widefactor)
-num_classes=1
+model = models.resnet50(pretrained=False)
+num_classes=8
 model.fc = nn.Linear(model.fc.in_features, num_classes)
 load_model(model, args.load_checkpoint)
 if torch.cuda.is_available():
@@ -63,12 +57,12 @@ for data, label in te_loader:
     # data = data.view(-1, 32*32)
     # break
     with torch.no_grad():
-        adv_data = attack.perturb(data, label, 'mean', False, True, False)
+        adv_data = attack.perturb(data, label, 'mean', False)
         model.eval()
-        output = model(adv_data, [1])
+        output = model(adv_data)
         pred = torch.max(output, dim=1)[1]
-        adv_list.append(adv_data.cpu().numpy().squeeze() * 255.0)  # (N, 28, 28)
-        in_list.append(data.cpu().numpy().squeeze() * 255.0)
+        adv_list.append(adv_data.cpu().numpy().squeeze())  # (N, 28, 28)
+        in_list.append(data.cpu().numpy().squeeze())
 
 # data = data.cpu().numpy().squeeze()  # (N, 28, 28)
 # data *= 255.0

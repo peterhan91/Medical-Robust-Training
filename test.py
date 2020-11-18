@@ -82,10 +82,9 @@ class Trainer():
             return total_acc / num, total_adv_acc / num, total_stdloss / num, total_advloss / num
 
 def main():
-    log_folder = './results/plots/robustness/nih_std_eps/'
+    log_folder = './results/plots/robustness/cxr_std_eps/'
     makedirs(log_folder)
     model = models.resnet50(pretrained=False)
-    # model = resnet50dsbn(pretrained=False)
     num_classes=8
     model.fc = nn.Linear(model.fc.in_features, num_classes)
     if torch.cuda.is_available():
@@ -93,7 +92,7 @@ def main():
     
     todo = 'test'
     if todo == 'test': # set 'valid' fold for knee and luna dataset and set 'test' fold for CXR dataset
-        eps = np.linspace(0.001, 0.1, num=11)
+        eps = np.linspace(0, 0.002, num=21)
         for i in range(len(eps)):
             epsilon = eps[i]
             alpha = epsilon / 2
@@ -105,7 +104,7 @@ def main():
                                         max_iters=10, 
                                         _type='linf')
             trainer = Trainer(attack, log_folder)
-            te_dataset = patd.PatchDataset(path_to_images='../NIH_Chest/images/',
+            te_dataset = patd.PatchDataset(path_to_images='../CheXpert_Dataset/images_256/images/',
                                             fold='test',
                                             transform=tv.transforms.Compose([
                                                 tv.transforms.Resize(256),

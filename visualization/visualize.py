@@ -21,10 +21,8 @@ makedirs(img_folder)
 out_num = 1
 
 transform_test = tv.transforms.Compose([
-        tv.transforms.Resize(256),
-        # tv.transforms.CenterCrop(224),
-        tv.transforms.ToTensor(),
-        # tv.transforms.Normalize(mean, std)
+        tv.transforms.Resize(64),
+        tv.transforms.ToTensor()
         ])
 te_dataset = patd.PatchDataset(path_to_images=args.data_root, fold='test',
                                transform=tv.transforms.ToTensor())
@@ -36,11 +34,6 @@ input_list = []
 grad_list = []
 label_list = []
 for data, label in te_loader:
-    # print(np.nonzero(label.squeeze().numpy())[0])
-    # disease_index = np.nonzero(label.squeeze().numpy())[0][0]
-    # print('label ', label)
-    # print('disease index ', disease_index)
-    # disease = te_dataset.PRED_LABEL[disease_index]
     if int(np.sum(label.squeeze().numpy())) > 0:
         disease = ''
         for i in range(int(np.sum(label.squeeze().numpy()))):
@@ -51,12 +44,11 @@ for data, label in te_loader:
         data, label = tensor2cuda(data), tensor2cuda(label)
         model_bns = resnet50dsbn(pretrained=args.pretrain, widefactor=args.widefactor)
         model_std = models.resnet50(pretrained=args.pretrain)
-        num_classes=3
+        num_classes=1
         model_bns.fc = nn.Linear(model_bns.fc.in_features, num_classes)
         model_std.fc = nn.Linear(model_std.fc.in_features, num_classes)
-        # load_model(model, args.load_checkpoint)
-        load_model(model_bns, './checkpoint/rijeka/knee_linf_/checkpoint_best.pth')
-        load_model(model_std, './checkpoint/rijeka/knee_std_/checkpoint_best.pth')
+        load_model(model_bns, args.load_checkpoint)
+        load_model(model_std, './checkpoint/luna/luna_linf_nobns/checkpoint_best.pth')
         if torch.cuda.is_available():
             model_bns.cuda()
             model_std.cuda()
