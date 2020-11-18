@@ -11,6 +11,14 @@
 * 64-bit Python 3.6 installation with numpy 1.13.3 or newer. We recommend Anaconda3.
 * One or more high-end NVIDIA Pascal or Volta GPUs with 16GB of DRAM. We recommend NVIDIA DGX-1 with 8 Tesla V100 GPUs.
 * NVIDIA driver 391.25 or newer, CUDA toolkit 9.0 or newer, cuDNN 7.1.2 or newer.
+* Pytorch 1.1.0
+
+## Datasets used in the study
+
+* [NIH dataset](https://nihcc.app.box.com/v/ChestXray-NIHCC)
+* [Stanford CheXpert dataset](https://stanfordmlgroup.github.io/competitions/chexpert)
+* [knee MRI dataset](http://www.riteh.uniri.hr/~istajduh/projects/kneeMRI/)
+* [LUNA16](https://luna16.grand-challenge.org/Data/)
 
 ## Basic usage
 
@@ -28,3 +36,12 @@ python main_bns.py --adv_train --affix dsbn_res50_linf --batch_size 16 --max_epo
 ```
 python main_std.py --affix dsbn_res18_AUC --todo test --load_checkpoint ./checkpoint/rijeka_ROIMG_dsbn_res18/checkpoint_best.pth 
 ```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
+
+## Acknowledgments
+
+* Domain-Specific Batch Normalization for Unsupervised Domain Adaptation: https://github.com/wgchang/DSBN
+* MadryLab at MIT: https://github.com/MadryLab/robust-features-code
