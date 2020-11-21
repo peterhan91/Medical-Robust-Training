@@ -1,6 +1,6 @@
 ## Adversarial training and dual batch normalization to refine neural network architectures for improved diagnostic performance and clinical usability of deep learning <br><i>– Official Pytorch implementation of the paper</i>
 
-**Tianyu Han** (RWTH), **Daniel Truhn** (UKA), **Volkmar Schulz** (RWTH), **Christiane Kuhl** (UKA)
+**Tianyu Han** (RWTH), **Daniel Truhn** (UKA), **Volkmar Schulz** (RWTH), **Christiane Kuhl** (UKA), **Fabian Kiessling** (RWTH)
 
 **Abstract:**<br>
 *Understanding the decision making process of machine learning models is an essential element for deploying computer vision algorithms in clinical practice. We demonstrate that adversarially trained models can significantly enhance usability in clinical practice as compared to standard models. We let six radiologists rate the interpretability of saliency maps in datasets of x-rays, computed tomography and magnetic resonance imaging. Significant improvements were found for adversarially trained models and results further improved when employing dual batch normalization. Contrary to previous research on adversarially trained models, we found that accuracy of such models was equal to standard models, when sufficiently large datasets and dual batch norm training were used. To ensure transferability, we additionally validated our results on an external test set of 22,433 x-rays. Our work demonstrates that different paths for adversarial and real images are needed during training in order to achieve state of the art results with superior interpretability.*
@@ -27,7 +27,7 @@
 python main_std.py --affix dsbn_res50_std --batch_size 16    
 ```
  
-* Network robust training
+* Network robust (dual bns) training
 ```
 python main_bns.py --adv_train --affix dsbn_res50_linf --batch_size 16 --max_epoch 250    
 ```
