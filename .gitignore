@@ -23,6 +23,7 @@ toy/
 *.csv
 *.png
 *.zip
+*.db
 
 # C extensions
 *.so

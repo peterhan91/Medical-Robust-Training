@@ -14,14 +14,11 @@ from model.resnetdsbn import *
 from attack import FastGradientSignUntargeted
 from utils import makedirs, create_logger, tensor2cuda, numpy2cuda, evaluate, evaluate_, save_model
 from argument import parser, print_args
-from plot import plot_AUC
 import patch_dataset as patd
 
 class Trainer():
     
     def __init__(self, attack, log_folder):
-        # self.args = args
-        # self.logger = logger
         self.attack = attack
         self.log_folder = log_folder
 
@@ -42,7 +39,7 @@ class Trainer():
             for data, label in loader:
                 data, label = tensor2cuda(data), tensor2cuda(label)
                 model.eval()
-                output = model(data)
+                output = model(data, [0])
                 std_loss = F.binary_cross_entropy(torch.sigmoid(output), label)
                 pred = torch.sigmoid(output)
                 out = (pred > t).float()
@@ -60,9 +57,9 @@ class Trainer():
                     with torch.enable_grad():
                         adv_data = self.attack.perturb(data, 
                                                        pred if use_pseudo_label else label, 
-                                                       'mean', False)
+                                                       'mean', False, True)
                     model.eval()
-                    adv_output = model(adv_data)
+                    adv_output = model(adv_data, [1])
                     adv_loss = F.binary_cross_entropy(torch.sigmoid(adv_output), label)
                     adv_pred = torch.sigmoid(adv_output)
                     if if_AUC:
@@ -77,22 +74,25 @@ class Trainer():
             pred = np.squeeze(np.array(pred_list))
             predadv = np.squeeze(np.array(predadv_list))
             label = np.squeeze(np.array(label_list))
+            np.save(os.path.join(self.log_folder, 'y_pred.npy'), pred)
+            np.save(os.path.join(self.log_folder, 'y_true.npy'), label)
             np.save(os.path.join(self.log_folder, 'y_predadv_'+str(epsilon)+'.npy'), predadv)
         else:
             return total_acc / num, total_adv_acc / num, total_stdloss / num, total_advloss / num
 
 def main():
-    log_folder = './results/plots/robustness/cxr_std_eps/'
+    log_folder = './results/plots/robustness/revision/luna/bn_adv/'
     makedirs(log_folder)
-    model = models.resnet50(pretrained=False)
-    num_classes=8
+    # model = models.resnet50(pretrained=False)
+    model = resnet50dsbn()
+    num_classes=1
     model.fc = nn.Linear(model.fc.in_features, num_classes)
     if torch.cuda.is_available():
         model = model.cuda()
     
     todo = 'test'
     if todo == 'test': # set 'valid' fold for knee and luna dataset and set 'test' fold for CXR dataset
-        eps = np.linspace(0, 0.002, num=21)
+        eps = np.linspace(0, 0.01, num=21)
         for i in range(len(eps)):
             epsilon = eps[i]
             alpha = epsilon / 2
@@ -104,14 +104,14 @@ def main():
                                         max_iters=10, 
                                         _type='linf')
             trainer = Trainer(attack, log_folder)
-            te_dataset = patd.PatchDataset(path_to_images='../CheXpert_Dataset/images_256/images/',
+            te_dataset = patd.PatchDataset(path_to_images='../luna16/IMGs/',
                                             fold='test',
                                             transform=tv.transforms.Compose([
-                                                tv.transforms.Resize(256),
+                                                tv.transforms.Resize(64),
                                                 tv.transforms.ToTensor()
                                                 ]))
             te_loader = DataLoader(te_dataset, batch_size=1, shuffle=False, num_workers=1)
-            checkpoint = torch.load('./checkpoint/cxr/chexpert_std_/checkpoint_best.pth')
+            checkpoint = torch.load('./checkpoint/luna/luna_linf_/checkpoint_best.pth')
             model.load_state_dict(checkpoint)
             trainer.test(model, te_loader, i, adv_test=True, 
                                 use_pseudo_label=False, if_AUC=True)

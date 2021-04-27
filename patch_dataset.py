@@ -3,8 +3,6 @@ import numpy as np
 from torch.utils.data import Dataset
 import os
 from PIL import Image
-from skimage import exposure
-from skimage import util
 
 
 class PatchDataset(Dataset):
@@ -18,7 +16,8 @@ class PatchDataset(Dataset):
         # the 'fold' column says something regarding the train/valid/test seperation
         self.df = self.df[self.df['fold'] == fold]
         if(sample > 0 and sample < len(self.df)):
-            self.df = self.df.sample(sample, random_state=42)
+            self.df = self.df.sample(frac=sample, random_state=42)
+            print('subsample the training set with ratio %f' % sample)
         
         # self.df = self.df.set_index('scan index')
         self.df = self.df.set_index('Image Index')
@@ -28,9 +27,6 @@ class PatchDataset(Dataset):
         self.PRED_LABEL = ['No Finding', 'Cardiomegaly', 'Edema', 
                             'Consolidation', 'Pneumonia', 'Atelectasis',
                             'Pneumothorax', 'Pleural Effusion']
-        # self.PRED_LABEL = ['Mass', 'Cardiomegaly', 'Edema', 
-        #             'Consolidation', 'Pneumonia', 'Atelectasis',
-        #             'Pneumothorax', 'Effusion']
 
     def __len__(self):
         return len(self.df)

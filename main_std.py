@@ -4,7 +4,7 @@ import copy
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, sampler
 import torchvision as tv
 from torchvision import models
 from torch.autograd import Variable
@@ -13,9 +13,19 @@ from time import time
 from attack import FastGradientSignUntargeted
 from utils import makedirs, create_logger, tensor2cuda, numpy2cuda, evaluate, evaluate_, save_model
 from argument import parser, print_args
-from plot import plot_AUC
 import patch_dataset as patd
 # os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(map(str, [0,2]))
+
+class AddGaussianNoise(object):
+    def __init__(self, mean=0., std=1.):
+        self.std = std
+        self.mean = mean
+        
+    def __call__(self, tensor):
+        return tensor + torch.randn(tensor.size()) * self.std + self.mean
+    
+    def __repr__(self):
+        return self.__class__.__name__ + '(mean={0}, std={1})'.format(self.mean, self.std)
 
 class Trainer():
     
@@ -192,7 +202,7 @@ class Trainer():
             predadv = np.squeeze(np.array(predadv_list))
             label = np.squeeze(np.array(label_list))
             np.save(os.path.join(self.args.log_folder, 'y_pred.npy'), pred)
-            np.save(os.path.join(self.args.log_folder, 'y_predadv_'+str(args.epsilon)+'.npy'), predadv)
+            # np.save(os.path.join(self.args.log_folder, 'y_predadv_'+str(args.epsilon)+'.npy'), predadv)
             np.save(os.path.join(self.args.log_folder, 'y_true.npy'), label)
             
             # PRED_label = ['No Finding', 'Cardiomegaly', 'Edema', 
@@ -256,11 +266,13 @@ def main(args):
                                             scale=(0.8,1.2), shear=10),                            
                 tv.transforms.RandomCrop(256),
                 tv.transforms.ToTensor(),
+                AddGaussianNoise(0.5, args.epsilon)
             ])
         tr_dataset = patd.PatchDataset(path_to_images=args.data_root,
                                         fold='train', 
+                                        sample=args.subsample,
                                         transform=transform_train)
-        tr_loader = DataLoader(tr_dataset, batch_size=args.batch_size, shuffle=True, num_workers=8)
+        tr_loader = DataLoader(tr_dataset, batch_size=args.batch_size, shuffle=True, num_workers=24)
         # evaluation during training
         transform_test = tv.transforms.Compose([
                 tv.transforms.Resize(256),
@@ -271,7 +283,7 @@ def main(args):
         te_dataset = patd.PatchDataset(path_to_images=args.data_root,
                                         fold='valid',
                                         transform=transform_test)
-        te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=8)
+        te_loader = DataLoader(te_dataset, batch_size=args.batch_size, shuffle=False, num_workers=24)
              
         trainer.train(model, tr_loader, te_loader, args.adv_train)
     

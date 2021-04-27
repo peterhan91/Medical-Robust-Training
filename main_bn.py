@@ -15,7 +15,6 @@ from model.resnetdsbn import *
 from attack import FastGradientSignUntargeted
 from utils import makedirs, create_logger, tensor2cuda, numpy2cuda, evaluate, evaluate_, save_model
 from argument import parser, print_args
-from plot import plot_AUC
 import patch_dataset as patd
 # os.environ["CUDA_VISIBLE_DEVICES"] = ','.join(map(str, [1,2]))
 
@@ -131,7 +130,6 @@ class Trainer():
     def test(self, model, loader, adv_test=False, 
                 use_pseudo_label=False, if_AUC=False):
         # adv_test is False, return adv_acc as -1 
-
         total_acc = 0.0
         num = 0
         total_adv_acc = 0.0
@@ -182,7 +180,7 @@ class Trainer():
             predadv = np.squeeze(np.array(predadv_list))
             label = np.squeeze(np.array(label_list))
             np.save(os.path.join(self.args.log_folder, 'y_pred.npy'), pred)
-            np.save(os.path.join(self.args.log_folder, 'y_predadv_'+str(args.epsilon)+'.npy'), predadv)
+            # np.save(os.path.join(self.args.log_folder, 'y_predadv_'+str(args.epsilon)+'.npy'), predadv)
             np.save(os.path.join(self.args.log_folder, 'y_true.npy'), label)
             # PRED_label = ['No Finding', 'Cardiomegaly', 'Edema', 
             #                 'Consolidation', 'Pneumonia', 'Atelectasis',
@@ -241,6 +239,7 @@ def main(args):
             ])
         tr_dataset = patd.PatchDataset(path_to_images=args.data_root,
                                         fold='train', 
+                                        sample=args.subsample,
                                         transform=transform_train)
         tr_loader = DataLoader(tr_dataset, batch_size=args.batch_size, shuffle=True, num_workers=12)
 
@@ -266,7 +265,7 @@ def main(args):
         te_loader = DataLoader(te_dataset, batch_size=1, shuffle=False, num_workers=1)
         checkpoint = torch.load(args.load_checkpoint)
         model.load_state_dict(checkpoint)
-        std_acc, adv_acc = trainer.test(model, te_loader, adv_test=True, use_pseudo_label=False, if_AUC=True)
+        std_acc, adv_acc = trainer.test(model, te_loader, adv_test=False, use_pseudo_label=False, if_AUC=True)
         print("std acc: %.4f, adv_acc: %.4f" % (std_acc * 100, adv_acc * 100))
 
     else:

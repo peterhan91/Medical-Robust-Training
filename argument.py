@@ -4,8 +4,9 @@ def parser():
     parser = argparse.ArgumentParser(description='Video Summarization')
     parser.add_argument('--todo', choices=['train', 'valid', 'test', 'visualize'], default='train',
         help='what behavior want to do: train | valid | test | visualize')
-    parser.add_argument('--dataset', default='rijeka_ROIMG', help='use what dataset')
-    parser.add_argument('--data_root', default='/media/tianyu.han/mri-scratch/DeepLearning/MRKnee/Script/Rijeka/Rijeka_dataset/roi_img/', 
+    parser.add_argument('--dataset', default='chexpert', help='use what dataset')
+    parser.add_argument('--subsample', type=float, default=0)
+    parser.add_argument('--data_root', default='../CheXpert_Dataset/images_256/images/', 
         help='the directory to save the dataset')
     parser.add_argument('--log_root', default='log', 
         help='the directory to save the logs or other imformations (e.g. images)')
@@ -26,7 +27,7 @@ def parser():
     parser.add_argument('--pretrain', type=bool, default=False, 
         help='Use ImageNet pretraining or not')
 
-    parser.add_argument('--batch_size', '-b', type=int, default=16, help='batch size')
+    parser.add_argument('--batch_size', '-b', type=int, default=64, help='batch size')
     parser.add_argument('--max_epoch', '-m_e', type=int, default=300, 
         help='the maximum numbers of the model see a sample')
     parser.add_argument('--learning_rate', '-lr', type=float, default=1e-2, help='learning rate')
@@ -36,7 +37,7 @@ def parser():
     parser.add_argument('--gpu', '-g', default='0', help='which gpu to use')
     parser.add_argument('--n_eval_step', type=int, default=50, 
         help='number of iteration per one evaluation')
-    parser.add_argument('--n_checkpoint_step', type=int, default=1000, 
+    parser.add_argument('--n_checkpoint_step', type=int, default=5000, 
         help='number of iteration to save a checkpoint')
     parser.add_argument('--n_store_image_step', type=int, default=5000, 
         help='number of iteration to save adversaries')
