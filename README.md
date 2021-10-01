@@ -34,7 +34,7 @@ python main_bn.py --adv_train --affix dsbn_res50_linf --batch_size 16 --max_epoc
 
 * Network testing and plot ROC-AUC
 ```
-python main_std.py --affix dsbn_res18_AUC --todo test --load_checkpoint ./checkpoint/rijeka_ROIMG_dsbn_res18/checkpoint_best.pth 
+python main_bn.py --affix dsbn_res18_AUC --todo test --load_checkpoint ./checkpoint/rijeka_ROIMG_dsbn_res18/checkpoint_best.pth 
 ```
 
 ## License
